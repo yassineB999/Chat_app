@@ -35,6 +35,26 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # STATE MANAGEMENT
+  # Predictable state management to separate business logic from UI.
+  flutter_bloc: ^9.1.1
+
+  # To simplify equality checks in your models and entities.
+  equatable: ^2.0.7
+
+  #dateformat
+  intl: ^0.20.2
+
+
+  floor: ^1.5.0
+
+  cached_network_image: ^3.4.1
+
+  dio: ^5.9.0
+  
+  flutter_hooks: ^0.21.3+1
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
