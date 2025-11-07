@@ -1,0 +1,93 @@
+# Use a specific, stable version of the Docker Compose file format.
+version: '3.8'
+
+services:
+  # -----------------------------------------------------
+  # Laravel Application Service (PHP-FPM)
+  # -----------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nexuschat-laravel-app
+    container_name: nexuschat-app
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./:/var/www
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nexuschat-network
+
+  # -----------------------------------------------------
+  # Web Server (Nginx)
+  # -----------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nexuschat-nginx
+    restart: unless-stopped
+    ports:
+      # Expose port 8000 on the host machine
+      - "8000:80"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx:/etc/nginx/conf.d/
+    networks:
+      - nexuschat-network
+
+  # -----------------------------------------------------
+  # MySQL Database Service
+  # -----------------------------------------------------
+  db:
+    image: mysql:8.0
+    container_name: nexuschat-db
+    restart: unless-stopped
+    ports:
+      # Expose port 33061 on the host to avoid conflicts
+      - "33061:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-nexuschat}
+      MYSQL_USER: ${DB_USERNAME:-user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    volumes:
+      # Persist database data using a named volume
+      - nexuschat_db_data:/var/lib/mysql
+    networks:
+      - nexuschat-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # -----------------------------------------------------
+  # phpMyAdmin Service
+  # -----------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: nexuschat-phpmyadmin
+    restart: unless-stopped
+    ports:
+      # Expose port 8081 on the host machine
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    depends_on:
+      - db
+    networks:
+      - nexuschat-network
+
+# -----------------------------------------------------
+# Networks and Volumes
+# -----------------------------------------------------
+networks:
+  nexuschat-network:
+    driver: bridge
+
+volumes:
+  nexuschat_db_data:
+    driver: local
