@@ -5,6 +5,7 @@ import 'package:nexuschatfe/features/auth/presentation/bloc/auth_event.dart';
 import 'package:nexuschatfe/features/auth/presentation/bloc/auth_state.dart';
 import 'package:nexuschatfe/features/auth/presentation/widgets/app_text_field.dart';
 import 'package:nexuschatfe/features/auth/presentation/widgets/primary_button.dart';
+import 'package:nexuschatfe/features/auth/presentation/widgets/google_sign_in_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   // ✨ BEST PRACTICE: Use const constructors.
@@ -22,7 +23,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    // ✨ BEST PRACTICE: Dispose all controllers.
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -107,6 +107,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         loading: isLoading,
                         onPressed: _onRegisterPressed,
                       ),
+                      const SizedBox(height: 12),
+                      GoogleSignInButton(loading: isLoading),
                       const SizedBox(height: 12),
                       TextButton(
                         onPressed: isLoading

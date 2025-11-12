@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:nexuschatfe/config/di/app_providers.dart';
+import 'package:nexuschatfe/features/auth/domain/repository/google_auth_repository.dart';
 import 'package:nexuschatfe/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:nexuschatfe/features/auth/domain/use_case/register_user.dart';
 import 'package:nexuschatfe/features/auth/domain/use_case/login_user.dart';
@@ -15,6 +16,7 @@ import 'package:nexuschatfe/features/auth/presentation/bloc/auth_event.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  await GoogleAuthRepository.initialize();
   await initializeDependencies();
   runApp(
     BlocProvider<AuthBloc>(

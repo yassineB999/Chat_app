@@ -5,7 +5,7 @@ import 'package:nexuschatfe/features/auth/presentation/bloc/auth_event.dart';
 import 'package:nexuschatfe/features/auth/presentation/bloc/auth_state.dart';
 import 'package:nexuschatfe/features/auth/presentation/pages/register_screen.dart';
 import 'package:nexuschatfe/features/auth/presentation/widgets/app_text_field.dart';
-import 'package:nexuschatfe/features/auth/presentation/widgets/google_button.dart';
+import 'package:nexuschatfe/features/auth/presentation/widgets/google_sign_in_button.dart';
 import 'package:nexuschatfe/features/auth/presentation/widgets/primary_button.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -103,10 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _onLoginPressed,
                       ),
                       const SizedBox(height: 12),
-                      GoogleButton(
-                        loading: isLoading,
-                        onPressed: () {},
-                      ), // Placeholder
+                      GoogleSignInButton(loading: isLoading),
                       const SizedBox(height: 12),
                       TextButton(
                         onPressed: isLoading
