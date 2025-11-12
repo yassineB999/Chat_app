@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\AuthenticateWithGoogleRequest;
 use App\Http\Requests\Api\LoginRequest;
 use App\Http\Requests\Api\RegisterRequest;
-use App\Http\Requests\Api\GoogleLoginRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -32,29 +33,50 @@ class AuthController extends Controller
         return response()->json(['user' => Auth::user(), 'token' => $token]);
     }
 
-    public function handleGoogleLogin(GoogleLoginRequest $request): JsonResponse
+    public function loginWithGoogle(AuthenticateWithGoogleRequest $request): JsonResponse
     {
-        // The GoogleLoginRequest already validated that 'access_token' is present
-        $accessToken = $request->validated()['access_token'];
+        try {
+            // The request validated 'token' key exists.
+            $result = $this->authService->handleGoogleLogin($request->validated()['token']);
+            
+            $user = $result['user'];
+            $isNewUser = $result['is_new'];
 
-        // Delegate the core logic to the AuthService
-        $result = $this->authService->handleGoogleLoginWithToken($accessToken);
+            // Invalidate any old tokens to ensure a fresh session
+            $user->tokens()->delete();
 
-        // If the service returns null, it means the token was invalid or an error occurred
-        if (!$result) {
+            // If the service determined this user was just created, tell the frontend
+            // that onboarding is required.
+            if ($isNewUser) {
+                $token = $user->createToken('onboarding_token')->plainTextToken;
+                
+                return response()->json([
+                    'message' => 'Profile incomplete. Please complete your profile.',
+                    'requires_onboarding' => true,
+                    'data' => [
+                        'user' => $user,
+                        'token' => $token,
+                    ],
+                ], 200);
+            }
+
+            // For existing users, generate a standard auth token
+            $token = $user->createToken('google_auth_token')->plainTextToken;
+
             return response()->json([
-                'message' => 'Invalid or expired Google token.'
-            ], 401);
+                'message' => 'Google login successful.',
+                'requires_onboarding' => false, // Onboarding is not required
+                'data' => [
+                    'user' => $user,
+                    'token' => $token,
+                ],
+            ], 200);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Authentication failed.',
+                'errors' => $e->errors(),
+            ], 422);
         }
-
-        // On success, return the user and token data provided by the service
-        return response()->json($result);
-    }
-
-    public function logout(Request $request): JsonResponse
-    {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Successfully logged out']);
     }
 }
-
