@@ -1,4 +1,5 @@
-import 'package:nexuschatfe/comon/ressources/data_states.dart';
+import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:nexuschatfe/features/auth/domain/repository/auth_repository.dart';
 
 class LogoutUser {
@@ -6,7 +7,7 @@ class LogoutUser {
 
   LogoutUser(this._repository);
 
-  Future<DataState<bool>> call({required String token}) {
+  Future<Either<DioException, bool>> call({required String token}) {
     return _repository.logout(token: token);
   }
 }

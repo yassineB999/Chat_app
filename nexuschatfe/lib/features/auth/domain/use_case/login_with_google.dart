@@ -1,4 +1,5 @@
-import 'package:nexuschatfe/comon/ressources/data_states.dart';
+import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:nexuschatfe/features/auth/domain/entities/auth_session.dart';
 import 'package:nexuschatfe/features/auth/domain/repository/auth_repository.dart';
 
@@ -7,7 +8,9 @@ class LoginWithGoogle {
 
   LoginWithGoogle(this._repository);
 
-  Future<DataState<AuthSession>> call({required String accessToken}) {
+  Future<Either<DioException, AuthSession>> call({
+    required String accessToken,
+  }) {
     return _repository.loginWithGoogleToken(accessToken: accessToken);
   }
 }

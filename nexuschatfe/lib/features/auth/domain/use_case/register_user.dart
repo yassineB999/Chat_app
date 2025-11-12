@@ -1,4 +1,5 @@
-import 'package:nexuschatfe/comon/ressources/data_states.dart';
+import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:nexuschatfe/features/auth/domain/repository/auth_repository.dart';
 
 class RegisterUser {
@@ -6,7 +7,7 @@ class RegisterUser {
 
   RegisterUser(this._repository);
 
-  Future<DataState<String>> call({
+  Future<Either<DioException, String>> call({
     required String name,
     required String email,
     required String password,

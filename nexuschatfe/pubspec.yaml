@@ -57,6 +57,10 @@ dependencies:
   flutter_dotenv: ^6.0.0
   
   get_it: ^9.0.5
+  logger: ^2.6.2
+  dartz: ^0.10.1
+  shared_preferences: ^2.5.3
+  flutter_secure_storage: ^9.2.4
 
 
 dev_dependencies:
