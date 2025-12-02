@@ -1,105 +1,111 @@
 import 'package:dartz/dartz.dart';
-import 'package:dio/dio.dart';
-import 'package:nexuschatfe/config/di/app_providers.dart';
+import 'package:nexuschatfe/core/error/exceptions.dart';
+import 'package:nexuschatfe/core/error/failures.dart';
 import 'package:nexuschatfe/features/auth/data/data_sources/local/auth_local_service.dart';
-import 'package:nexuschatfe/features/auth/data/data_sources/remote/auth_apiservice.dart';
-import 'package:nexuschatfe/features/auth/data/models/auth_session_model.dart';
+import 'package:nexuschatfe/features/auth/data/data_sources/remote/auth_remote_data_source.dart';
 import 'package:nexuschatfe/features/auth/domain/entities/auth_session.dart';
 import 'package:nexuschatfe/features/auth/domain/repository/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  AuthApiservice get _api => getIt<AuthApiservice>();
-  AuthLocalService get _local => getIt<AuthLocalService>();
+  final AuthRemoteDataSource _remoteDataSource;
+  final AuthLocalService _localService;
+
+  AuthRepositoryImpl(this._remoteDataSource, this._localService);
 
   @override
-  Future<Either<DioException, bool>> logout({required String token}) async {
-    try {
-      final Response response = await _api.logout(token: token);
-      final success = response.statusCode == 200 || response.statusCode == 204;
-      if (success) {
-        await _local.logout();
-      }
-      return Right(success);
-    } on DioException catch (e) {
-      return Left(e);
-    }
-  }
-
-  @override
-  Future<Either<DioException, AuthSession>> login({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      final Response response = await _api.login(
-        email: email,
-        password: password,
-      );
-      final session = AuthSessionModel.fromJson(
-        response.data is Map<String, dynamic> ? response.data : {},
-      );
-      if (session.token.isNotEmpty) {
-        await _local.saveToken(session.token);
-      }
-      return Right(session);
-    } on DioException catch (e) {
-      return Left(e);
-    }
-  }
-
-  @override
-  Future<Either<DioException, AuthSession>> loginWithGoogleToken({
-    required String accessToken,
-  }) async {
-    try {
-      final Response response = await _api.loginWithGoogleToken(
-        accessToken: accessToken,
-      );
-      final session = AuthSessionModel.fromJson(
-        response.data is Map<String, dynamic> ? response.data : {},
-      );
-      if (session.token.isNotEmpty) {
-        await _local.saveToken(session.token);
-      }
-      return Right(session);
-    } on DioException catch (e) {
-      return Left(e);
-    }
-  }
-
-  @override
-  Future<Either<DioException, String>> register({
+  Future<Either<Failure, void>> register({
     required String name,
     required String email,
     required String password,
   }) async {
     try {
-      final Response response = await _api.register(
+      await _remoteDataSource.register(
         name: name,
         email: email,
         password: password,
       );
-      final data = response.data;
-      final token = data is Map<String, dynamic>
-          ? (data['token'] as String? ?? '')
-          : '';
-      if (token.isEmpty) {
-        return Left(DioException(
-          requestOptions: RequestOptions(path: '/register'),
-          response: response,
-          message:
-              'Registration succeeded but no token was returned (status ${response.statusCode}).',
-        ));
-      }
-      await _local.saveToken(token);
-      return Right(token);
-    } on DioException catch (e) {
-      return Left(e);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthSession>> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final session = await _remoteDataSource.verifyOtp(email: email, otp: otp);
+
+      // Save token locally
+      await _localService.saveToken(session.token);
+
+      return Right(session);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthSession>> login({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final session = await _remoteDataSource.login(
+        email: email,
+        password: password,
+      );
+
+      await _localService.saveToken(session.token);
+
+      return Right(session);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthSession>> loginWithGoogleToken({
+    required String accessToken,
+  }) async {
+    try {
+      final session = await _remoteDataSource.loginWithGoogle(
+        accessToken: accessToken,
+      );
+
+      await _localService.saveToken(session.token);
+
+      return Right(session);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> logout({required String token}) async {
+    try {
+      await _remoteDataSource.logout(token: token);
+      await _localService.logout();
+      return const Right(true);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
   Future<bool> isLoggedIn() {
-    return _local.isLoggedIn();
+    return _localService.isLoggedIn();
   }
 }

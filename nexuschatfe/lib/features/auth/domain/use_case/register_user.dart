@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import 'package:dio/dio.dart';
+import 'package:nexuschatfe/core/error/failures.dart';
 import 'package:nexuschatfe/features/auth/domain/repository/auth_repository.dart';
 
 class RegisterUser {
@@ -7,7 +7,7 @@ class RegisterUser {
 
   RegisterUser(this._repository);
 
-  Future<Either<DioException, String>> call({
+  Future<Either<Failure, void>> call({
     required String name,
     required String email,
     required String password,

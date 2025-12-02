@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\AuthenticateWithGoogleRequest;
 use App\Http\Requests\Api\LoginRequest;
 use App\Http\Requests\Api\RegisterRequest;
-use App\Http\Requests\VerifyOtpRequest;
+use App\Http\Requests\Api\VerifyOtpRequest as ApiVerifyOtpRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +29,7 @@ class AuthController extends Controller
     }
     
 
-    public function verifyOtp(VerifyOtpRequest $request): JsonResponse
+    public function verifyOtp(ApiVerifyOtpRequest $request): JsonResponse
     {
         try {
             $result = $this->authService->verifyOtp($request->validated());

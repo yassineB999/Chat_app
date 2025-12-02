@@ -1,23 +1,29 @@
 import 'package:dio/dio.dart';
-
+import 'package:nexuschatfe/config/network/auth_interceptor.dart';
 import 'interceptors.dart';
 
 class DioClient {
   late final Dio _dio;
-  DioClient()
-    : _dio = Dio(
-        BaseOptions(
-          headers: {'Content-Type': 'application/json; charset=UTF-8'},
-          responseType: ResponseType.json,
-          sendTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 10),
-          followRedirects: true,
-          maxRedirects: 5,
-          // Allow 3xx so redirects don't immediately throw; we'll still
-          // validate content in repository parsing.
-          validateStatus: (status) => status != null && status < 400,
-        ),
-      )..interceptors.addAll([LoggerInterceptor()]);
+  DioClient(AuthInterceptor authInterceptor)
+    : _dio =
+          Dio(
+              BaseOptions(
+                headers: {
+                  'Content-Type': 'application/json; charset=UTF-8',
+                  'Accept': 'application/json',
+                },
+                responseType: ResponseType.json,
+                sendTimeout: const Duration(seconds: 30),
+                receiveTimeout: const Duration(seconds: 30),
+                followRedirects: true,
+                maxRedirects: 5,
+                validateStatus: (status) => status != null && status < 500,
+              ),
+            )
+            ..interceptors.addAll([
+              authInterceptor, // Auth interceptor runs first to add token
+              LoggerInterceptor(), // Logger runs second to log the full request
+            ]);
 
   // GET METHOD
   Future<Response> get(
@@ -28,14 +34,13 @@ class DioClient {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      final Response response = await _dio.get(
+      return await _dio.get(
         url,
         queryParameters: queryParameters,
         options: options,
         cancelToken: cancelToken,
         onReceiveProgress: onReceiveProgress,
       );
-      return response;
     } on DioException {
       rethrow;
     }
@@ -51,14 +56,13 @@ class DioClient {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      final Response response = await _dio.post(
+      return await _dio.post(
         url,
         data: data,
         options: options,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
       );
-      return response;
     } catch (e) {
       rethrow;
     }
@@ -75,7 +79,7 @@ class DioClient {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
-      final Response response = await _dio.put(
+      return await _dio.put(
         url,
         data: data,
         queryParameters: queryParameters,
@@ -84,7 +88,6 @@ class DioClient {
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
       );
-      return response;
     } catch (e) {
       rethrow;
     }
@@ -99,14 +102,13 @@ class DioClient {
     CancelToken? cancelToken,
   }) async {
     try {
-      final Response response = await _dio.delete(
+      return await _dio.delete(
         url,
         data: data,
         queryParameters: queryParameters,
         options: options,
         cancelToken: cancelToken,
       );
-      return response.data;
     } catch (e) {
       rethrow;
     }

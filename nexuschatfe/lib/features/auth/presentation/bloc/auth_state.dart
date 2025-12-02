@@ -16,6 +16,14 @@ class AuthLoading extends AuthState {
   const AuthLoading();
 }
 
+class AuthAwaitingOtpVerification extends AuthState {
+  final String email;
+  const AuthAwaitingOtpVerification(this.email);
+
+  @override
+  List<Object?> get props => [email];
+}
+
 class AuthAuthenticated extends AuthState {
   final AuthSession session;
   const AuthAuthenticated(this.session);
