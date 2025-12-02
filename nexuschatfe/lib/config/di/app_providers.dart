@@ -68,30 +68,6 @@ Future<void> initializeDependencies() async {
     () => PusherConfig(getIt<DioClient>()),
   );
 
-  // Blocs
-  getIt.registerFactory<AuthBloc>(
-    () => AuthBloc(
-      registerUser: getIt<RegisterUser>(),
-      loginUser: getIt<LoginUser>(),
-      loginWithGoogle: getIt<LoginWithGoogle>(),
-      logoutUser: getIt<LogoutUser>(),
-      verifyOtp: getIt<VerifyOtp>(),
-      localService: getIt<AuthLocalService>(),
-    ),
-  );
-
-  getIt.registerFactory<ChatBloc>(
-    () => ChatBloc(
-      getChatRooms: getIt<GetChatRooms>(),
-      getMessages: getIt<GetMessages>(),
-      sendMessage: getIt<SendMessage>(),
-      searchUsers: getIt<SearchUsers>(),
-      provideChatRoom: getIt<ProvideChatRoom>(),
-      pusherConfig: getIt<PusherConfig>(),
-      authLocalService: getIt<AuthLocalService>(),
-    ),
-  );
-
   // ---------------------------------------------------------------------------
   // CHAT FEATURE
   // ---------------------------------------------------------------------------
@@ -113,5 +89,29 @@ Future<void> initializeDependencies() async {
   getIt.registerSingleton<SearchUsers>(SearchUsers(getIt<ChatRepository>()));
   getIt.registerSingleton<ProvideChatRoom>(
     ProvideChatRoom(getIt<ChatRepository>()),
+  );
+
+  // 4. Blocs
+  getIt.registerFactory<AuthBloc>(
+    () => AuthBloc(
+      registerUser: getIt<RegisterUser>(),
+      loginUser: getIt<LoginUser>(),
+      loginWithGoogle: getIt<LoginWithGoogle>(),
+      logoutUser: getIt<LogoutUser>(),
+      verifyOtp: getIt<VerifyOtp>(),
+      localService: getIt<AuthLocalService>(),
+    ),
+  );
+
+  getIt.registerFactory<ChatBloc>(
+    () => ChatBloc(
+      getChatRooms: getIt<GetChatRooms>(),
+      getMessages: getIt<GetMessages>(),
+      sendMessage: getIt<SendMessage>(),
+      searchUsers: getIt<SearchUsers>(),
+      provideChatRoom: getIt<ProvideChatRoom>(),
+      pusherConfig: getIt<PusherConfig>(),
+      authLocalService: getIt<AuthLocalService>(),
+    ),
   );
 }

@@ -94,23 +94,47 @@ class _SendMessageWidgetState extends State<SendMessageWidget> {
   }
 
   Future<void> _pickImage() async {
-    final file = await MediaPickerService.pickImage(ImageSource.gallery);
-    if (file != null) {
-      setState(() {
-        _selectedImage = file;
-        _selectedFile = null;
-      });
-    }
+    final result = await MediaPickerService.pickImage(ImageSource.gallery);
+    result.fold(
+      (failure) {
+        // Show error to user
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(failure.message)));
+        }
+      },
+      (file) {
+        if (file != null) {
+          setState(() {
+            _selectedImage = file;
+            _selectedFile = null;
+          });
+        }
+      },
+    );
   }
 
   Future<void> _pickFile() async {
-    final file = await MediaPickerService.pickDocument();
-    if (file != null) {
-      setState(() {
-        _selectedFile = file;
-        _selectedImage = null;
-      });
-    }
+    final result = await MediaPickerService.pickDocument();
+    result.fold(
+      (failure) {
+        // Show error to user
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(failure.message)));
+        }
+      },
+      (file) {
+        if (file != null) {
+          setState(() {
+            _selectedFile = file;
+            _selectedImage = null;
+          });
+        }
+      },
+    );
   }
 
   @override

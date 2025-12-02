@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:nexuschatfe/config/network/dio_client.dart';
+import 'package:nexuschatfe/core/constants/app_constants.dart';
 import 'package:nexuschatfe/core/utils/env.dart';
+import 'package:nexuschatfe/core/utils/logger.dart';
 import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 
 class PusherConfig {
@@ -22,9 +23,10 @@ class PusherConfig {
     _pusherClient = PusherChannelsFlutter.getInstance();
 
     try {
-      log(
-        '🔧 Initializing Pusher with key: ${Env.pusherAppKey}, cluster: ${Env.pusherAppCluster}',
+      AppLogger.pusher(
+        'Initializing Pusher with key: ${Env.pusherAppKey}, cluster: ${Env.pusherAppCluster}',
       );
+
       await _pusherClient.init(
         apiKey: Env.pusherAppKey,
         cluster: Env.pusherAppCluster,
@@ -32,26 +34,36 @@ class PusherConfig {
         onError: onError,
         onSubscriptionSucceeded: onSubscriptionSucceeded,
         onEvent: (event) {
-          log("🔥 [Pusher] Incoming Event: ${event.eventName}");
-          log("🔥 [Pusher] Event Data: ${event.data}");
-          log("🔥 [Pusher] Channel: ${event.channelName}");
+          AppLogger.pusher('Incoming Event: ${event.eventName}');
+          AppLogger.debug('Event Data: ${event.data}', tag: 'Pusher');
+          AppLogger.debug('Channel: ${event.channelName}', tag: 'Pusher');
 
-          // Check for both simple name and fully qualified name just in case
-          if (event.eventName == 'message.sent' ||
-              event.eventName == 'App\\\\Events\\\\PushChatMessageEvent' ||
-              event.eventName.endsWith('message.sent') ||
-              event.eventName.contains('PushChatMessageEvent')) {
-            log('✅ [Pusher] Message event matched, forwarding to callback');
+          // Check if this is a message event
+          if (_isMessageEvent(event.eventName)) {
+            AppLogger.success(
+              'Message event matched, forwarding to callback',
+              tag: 'Pusher',
+            );
             try {
               // Parse JSON event.data string to Map
               final Map<String, dynamic> messageData = jsonDecode(event.data);
-              log('📦 [Pusher] Parsed message data: $messageData');
+              AppLogger.debug(
+                'Parsed message data: $messageData',
+                tag: 'Pusher',
+              );
               onEventData(messageData);
             } catch (e) {
-              log('❌ [Pusher] Error parsing event data: $e');
+              AppLogger.error(
+                'Error parsing event data',
+                tag: 'Pusher',
+                error: e,
+              );
             }
           } else {
-            log('⚠️ [Pusher] Event not matched: ${event.eventName}');
+            AppLogger.warning(
+              'Event not matched: ${event.eventName}',
+              tag: 'Pusher',
+            );
           }
         },
         onSubscriptionError: onSubscriptionError,
@@ -63,10 +75,18 @@ class PusherConfig {
       );
 
       await _pusherClient.connect();
-      log('✅ Pusher connected successfully');
+      AppLogger.success('Pusher connected successfully', tag: 'Pusher');
     } catch (e) {
-      log("❌ Error in initialization: $e");
+      AppLogger.error('Error in initialization', tag: 'Pusher', error: e);
     }
+  }
+
+  /// Helper method to check if event name matches message event patterns
+  bool _isMessageEvent(String eventName) {
+    return eventName == AppConstants.pusherMessageSentEvent ||
+        eventName == AppConstants.pusherMessageEventClass ||
+        eventName.endsWith(AppConstants.pusherMessageSentEvent) ||
+        eventName.contains('PushChatMessageEvent');
   }
 
   /// Subscribe to a specific chat room channel
@@ -74,27 +94,37 @@ class PusherConfig {
     try {
       // Unsubscribe from previous channel if exists
       if (_currentChannel != null && _currentRoomId != null) {
-        log('🔄 Unsubscribing from previous room: $_currentRoomId');
+        AppLogger.info(
+          'Unsubscribing from previous room: $_currentRoomId',
+          tag: 'Pusher',
+        );
         await unsubscribeFromRoom(_currentRoomId!);
       }
 
-      final channelName = 'private-chat.room.$roomId';
-      log('📡 Subscribing to channel: $channelName');
+      final channelName = '${AppConstants.privateChatChannelPrefix}$roomId';
+      AppLogger.network('Subscribing to channel: $channelName', tag: 'Pusher');
 
       _currentChannel = await _pusherClient.subscribe(channelName: channelName);
       _currentRoomId = roomId;
 
-      log('✅ Successfully subscribed to $channelName');
+      AppLogger.success(
+        'Successfully subscribed to $channelName',
+        tag: 'Pusher',
+      );
     } catch (e) {
-      log('❌ Error subscribing to room $roomId: $e');
+      AppLogger.error(
+        'Error subscribing to room $roomId',
+        tag: 'Pusher',
+        error: e,
+      );
     }
   }
 
   /// Unsubscribe from a specific chat room channel
   Future<void> unsubscribeFromRoom(String roomId) async {
     try {
-      final channelName = 'private-chat.room.$roomId';
-      log('Unsubscribing from channel: $channelName');
+      final channelName = '${AppConstants.privateChatChannelPrefix}$roomId';
+      AppLogger.info('Unsubscribing from channel: $channelName', tag: 'Pusher');
 
       await _pusherClient.unsubscribe(channelName: channelName);
 
@@ -103,46 +133,64 @@ class PusherConfig {
         _currentRoomId = null;
       }
 
-      log('Successfully unsubscribed from $channelName');
+      AppLogger.success(
+        'Successfully unsubscribed from $channelName',
+        tag: 'Pusher',
+      );
     } catch (e) {
-      log('Error unsubscribing from room $roomId: $e');
+      AppLogger.error(
+        'Error unsubscribing from room $roomId',
+        tag: 'Pusher',
+        error: e,
+      );
     }
   }
 
   void disconnect() {
     _pusherClient.disconnect();
+    AppLogger.info('Pusher disconnected', tag: 'Pusher');
   }
 
   void onConnectionStateChange(dynamic currentState, dynamic previousState) {
-    log("🔗 Connection changed: $previousState -> $currentState");
+    AppLogger.network(
+      'Connection changed: $previousState → $currentState',
+      tag: 'Pusher',
+    );
   }
 
   void onError(String message, int? code, dynamic e) {
-    log("❌ Pusher Error: $message code: $code exception: $e");
+    AppLogger.error(
+      'Pusher Error: $message (code: $code)',
+      tag: 'Pusher',
+      error: e,
+    );
   }
 
   void onEvent(PusherEvent event) {
-    log("onEvent: $event");
+    AppLogger.debug('onEvent: $event', tag: 'Pusher');
   }
 
   void onSubscriptionSucceeded(String channelName, dynamic data) {
-    log("✅ Subscription succeeded: $channelName data: $data");
+    AppLogger.success('Subscription succeeded: $channelName', tag: 'Pusher');
   }
 
   void onSubscriptionError(String message, dynamic e) {
-    log("❌ Subscription Error: $message Exception: $e");
+    AppLogger.error('Subscription Error: $message', tag: 'Pusher', error: e);
   }
 
   void onDecryptionFailure(String event, String reason) {
-    log("❌ Decryption Failure: $event reason: $reason");
+    AppLogger.error(
+      'Decryption Failure: $event (reason: $reason)',
+      tag: 'Pusher',
+    );
   }
 
   void onMemberAdded(String channelName, PusherMember member) {
-    log("👤 Member added: $channelName user: $member");
+    AppLogger.debug('Member added to $channelName: $member', tag: 'Pusher');
   }
 
   void onMemberRemoved(String channelName, PusherMember member) {
-    log("👤 Member removed: $channelName user: $member");
+    AppLogger.debug('Member removed from $channelName: $member', tag: 'Pusher');
   }
 
   dynamic onAuthorizer(
@@ -152,8 +200,12 @@ class PusherConfig {
     String token,
   ) async {
     try {
-      var authUrl = "${Env.apiBaseUrl}/broadcasting/auth";
-      log('🔐 Authorizing channel: $channelName with socket: $socketId');
+      var authUrl = "${Env.apiBaseUrl}${AppConstants.broadcastAuthEndpoint}";
+      AppLogger.network(
+        'Authorizing channel: $channelName with socket: $socketId',
+        tag: 'Pusher',
+      );
+
       var result = await _dioClient.post(
         authUrl,
         data: {'socket_id': socketId, 'channel_name': channelName},
@@ -165,13 +217,13 @@ class PusherConfig {
         ),
       );
 
-      // The Pusher library expects a Map<String, dynamic> with 'auth' key
-      // or just the JSON response depending on the library version.
-      // Based on the working example, it returns the auth data directly.
-      log("✅ Authorization successful: ${result.data}");
+      AppLogger.success(
+        'Authorization successful: ${result.data}',
+        tag: 'Pusher',
+      );
       return result.data;
     } catch (e) {
-      log("❌ Error in authorizer: $e");
+      AppLogger.error('Error in authorizer', tag: 'Pusher', error: e);
       return {};
     }
   }
@@ -179,10 +231,10 @@ class PusherConfig {
   Future<String?> getSocketId() async {
     try {
       final socketId = await _pusherClient.getSocketId();
-      log('🔌 Socket ID retrieved: $socketId');
+      AppLogger.debug('Socket ID retrieved: $socketId', tag: 'Pusher');
       return socketId;
     } catch (e) {
-      log('❌ Error getting socket ID: $e');
+      AppLogger.error('Error getting socket ID', tag: 'Pusher', error: e);
       return null;
     }
   }
