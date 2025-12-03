@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\GroupController;
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
@@ -27,4 +28,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/chat/rooms/{roomId}/messages', [ChatController::class, 'send']);
     Route::get('/chat/rooms', [ChatController::class, 'getChatRooms']);
     Route::get('/chat/rooms/{roomId}/messages', [ChatController::class, 'getMessages']);
+
+    // Group Routes
+    Route::prefix('groups')->group(function () {
+        Route::get('/', [GroupController::class, 'index']);
+        Route::post('/', [GroupController::class, 'store']);
+        Route::get('/{id}', [GroupController::class, 'show']);
+        Route::put('/{id}', [GroupController::class, 'update']);
+        Route::delete('/{id}', [GroupController::class, 'destroy']);
+
+        Route::get('/{id}/members', [GroupController::class, 'getMembers']);
+        Route::post('/{id}/members', [GroupController::class, 'addMembers']);
+        Route::delete('/{groupId}/members/{userId}', [GroupController::class, 'removeMember']);
+        Route::put('/{groupId}/members/{userId}/role', [GroupController::class, 'updateMemberRole']);
+        Route::post('/{id}/leave', [GroupController::class, 'leave']);
+    });
 });
