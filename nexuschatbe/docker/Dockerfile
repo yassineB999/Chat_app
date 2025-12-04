@@ -28,8 +28,12 @@ WORKDIR /var/www
 # Copy application code
 COPY . /var/www
 
-# Copy supervisor config
+# Copy supervisor config and entrypoint
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Make entrypoint executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
@@ -38,13 +42,16 @@ RUN composer install --no-dev --optimize-autoloader
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
     && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# Optimize Laravel
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# Create .env if it doesn't exist (will be overwritten by volume/copy)
+RUN if [ ! -f .env ]; then cp .env.example .env 2>/dev/null || echo "APP_KEY=" > .env; fi
+
+# Optimize Laravel (skip key:generate as it will be done later)
+RUN php artisan config:cache || true
+RUN php artisan route:cache || true  
+RUN php artisan view:cache || true
 
 # Expose port 9000
 EXPOSE 9000
 
-# Run supervisor
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Use entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
