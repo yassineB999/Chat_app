@@ -1,38 +1,36 @@
 #!/bin/bash
 
-# Stop execution on error
+# NexusChat - Redéploiement rapide
 set -e
 
-echo "Démarrage du déploiement..."
+echo "🔄 Redéploiement de l'application..."
 
-# 1. Pull latest changes (if using git)
-# git pull origin main
+# 1. Stop containers
+echo "Arrêt des conteneurs..."
+docker compose down
 
-# 2. Build and start containers
-echo "Reconstruction et redémarrage des conteneurs..."
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+# 2. Rebuild only the app (fastest)
+echo "Reconstruction de l'image..."
+docker compose build
 
-# 3. Wait for database to be ready
-echo "Attente de la base de données..."
+# 3. Start everything
+echo "Démarrage..."
+docker compose up -d
+
+# 4. Wait for MySQL
+echo "Attente de MySQL (10s)..."
 sleep 10
 
-# 4. Run migrations
-echo "Exécution des migrations..."
-docker-compose exec -T nexuschat-app php artisan migrate --force
+# 5. Run migrations
+echo "Migrations..."
+docker compose exec -T nexuschat-app php artisan migrate --force
 
-# 5. Clear caches
-echo "Nettoyage des caches..."
-docker-compose exec -T nexuschat-app php artisan config:clear
-docker-compose exec -T nexuschat-app php artisan cache:clear
-docker-compose exec -T nexuschat-app php artisan route:clear
-docker-compose exec -T nexuschat-app php artisan view:clear
-
-# 6. Optimize
+# 6. Clear and cache
 echo "Optimisation..."
-docker-compose exec -T nexuschat-app php artisan config:cache
-docker-compose exec -T nexuschat-app php artisan route:cache
-docker-compose exec -T nexuschat-app php artisan view:cache
+docker compose exec -T nexuschat-app php artisan config:clear
+docker compose exec -T nexuschat-app php artisan config:cache
+docker compose exec -T nexuschat-app php artisan route:cache
+docker compose exec -T nexuschat-app php artisan view:cache
 
-echo "Déploiement terminé avec succès !"
+echo "✅ Déploiement terminé!"
+docker compose ps

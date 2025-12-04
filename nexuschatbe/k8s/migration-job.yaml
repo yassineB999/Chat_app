@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: laravel-migration
+  namespace: nexuschat
+spec:
+  template:
+    spec:
+      containers:
+      - name: laravel-migration
+        image: your-dockerhub-username/nexuschat-app:latest
+        command:
+        - php
+        - artisan
+        - migrate
+        - --force
+        env:
+        - name: DB_CONNECTION
+          value: "mysql"
+        - name: DB_HOST
+          value: "mysql"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: nexuschat-config
+              key: db-name
+        - name: DB_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: nexuschat-config
+              key: db-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nexuschat-secrets
+              key: db-password
+      restartPolicy: OnFailure
+  backoffLimit: 3

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexuschat-config
+  namespace: nexuschat
+data:
+  db-name: "nexuschat"
+  db-user: "user"
+  pusher-cluster: "eu"
+  app-url: "http://192.168.1.4:8000"
+

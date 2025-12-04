@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexuschat-app
+  namespace: nexuschat
+spec:
+  selector:
+    app: nexuschat-app
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexuschat-app
+  namespace: nexuschat
+spec:
+  replicas: 2  # Scale to 2 pods for high availability
+  selector:
+    matchLabels:
+      app: nexuschat-app
+  template:
+    metadata:
+      labels:
+        app: nexuschat-app
+    spec:
+      containers:
+      - name: nexuschat-app
+        image: your-dockerhub-username/nexuschat-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9000
+        env:
+        - name: APP_ENV
+          value: "production"
+        - name: APP_DEBUG
+          value: "false"
+        - name: APP_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nexuschat-secrets
+              key: app-key
+        - name: DB_CONNECTION
+          value: "mysql"
+        - name: DB_HOST
+          value: "mysql"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: nexuschat-config
+              key: db-name
+        - name: DB_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: nexuschat-config
+              key: db-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nexuschat-secrets
+              key: db-password
+        - name: PUSHER_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: nexuschat-secrets
+              key: pusher-app-id
+        - name: PUSHER_APP_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nexuschat-secrets
+              key: pusher-app-key
+        - name: PUSHER_APP_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: nexuschat-secrets
+              key: pusher-app-secret
+        - name: PUSHER_APP_CLUSTER
+          valueFrom:
+            configMapKeyRef:
+              name: nexuschat-config
+              key: pusher-cluster
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - php
+            - artisan
+            - db:show
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: storage
+          mountPath: /var/www/storage/app
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: nexuschat-storage-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nexuschat-storage-pvc
+  namespace: nexuschat
+spec:
+  accessModes:
+    - ReadWriteMany  # Multiple pods need to share storage
+  resources:
+    requests:
+      storage: 5Gi
