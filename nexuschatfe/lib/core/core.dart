@@ -1,5 +1,4 @@
 // Core Base Classes
-export 'base/base_bloc.dart';
 export 'base/base_use_case.dart';
 
 // Constants

@@ -6,11 +6,16 @@ import 'package:nexuschatfe/features/auth/presentation/bloc/auth_state.dart';
 import 'package:nexuschatfe/features/auth/presentation/pages/home_screen.dart';
 import 'package:nexuschatfe/features/auth/presentation/pages/login_screen.dart';
 import 'package:nexuschatfe/features/auth/presentation/pages/register_screen.dart';
+import 'package:nexuschatfe/features/auth/presentation/pages/splash_screen.dart';
 import 'package:nexuschatfe/features/auth/presentation/pages/verify_otp_screen.dart';
 import 'package:nexuschatfe/features/chat/presentation/pages/chat_room_screen.dart';
 import 'package:nexuschatfe/features/chat/presentation/pages/user_search_screen.dart';
 
-/// GoRouter configuration for the entire app
+/// GoRouter configuration for the entire app.
+///
+/// This router handles all navigation and authentication-based redirects.
+/// The [authBloc] is used to determine the current authentication state
+/// and redirect users to the appropriate screens.
 class AppRouter {
   final AuthBloc authBloc;
 
@@ -18,32 +23,46 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     debugLogDiagnostics: true,
-    initialLocation: '/',
+    initialLocation: '/splash',
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
 
     // Redirect logic for authentication
     redirect: (context, state) {
       final authState = authBloc.state;
-      final isLoggedIn = authState is AuthAuthenticated;
+      final currentLocation = state.matchedLocation;
 
-      final isLoggingIn = state.matchedLocation == '/login';
-      final isRegistering = state.matchedLocation == '/register';
-      final isVerifyingOtp = state.matchedLocation.startsWith('/verify-otp');
+      final isOnSplash = currentLocation == '/splash';
+      final isLoggingIn = currentLocation == '/login';
+      final isRegistering = currentLocation == '/register';
+      final isVerifyingOtp = currentLocation.startsWith('/verify-otp');
       final isOnAuthPage = isLoggingIn || isRegistering || isVerifyingOtp;
 
-      // 1. If not logged in and not on auth page -> Redirect to Login
-      if (!isLoggedIn && !isOnAuthPage) {
+      // 1. If auth state is still being determined (AuthInitial),
+      //    stay on splash screen to prevent flicker
+      if (authState is AuthInitial) {
+        return isOnSplash ? null : '/splash';
+      }
+
+      // 2. If authenticated -> Go to home (unless already on a protected route)
+      if (authState is AuthAuthenticated) {
+        if (isOnSplash || isOnAuthPage) {
+          return '/home';
+        }
+        return null; // Stay on current protected route
+      }
+
+      // 3. If awaiting OTP verification -> Go to verify OTP screen
+      if (authState is AuthAwaitingOtpVerification) {
+        if (!isVerifyingOtp) {
+          return '/verify-otp/${authState.email}';
+        }
+        return null;
+      }
+
+      // 4. If unauthenticated (AuthUnauthenticated, AuthError, AuthLoggedOut)
+      //    -> Redirect to login if not already on an auth page
+      if (!isOnAuthPage) {
         return '/login';
-      }
-
-      // 2. If logged in and on auth page -> Redirect to Home
-      if (isLoggedIn && isOnAuthPage) {
-        return '/home';
-      }
-
-      // 3. If awaiting OTP -> Redirect to Verify OTP (if not already there)
-      if (authState is AuthAwaitingOtpVerification && !isVerifyingOtp) {
-        return '/verify-otp/${authState.email}';
       }
 
       // No redirect needed
@@ -51,16 +70,18 @@ class AppRouter {
     },
 
     routes: [
-      // Root - redirect based on auth status
+      // ─────────────────────────────────────────────────────────────────────
+      // SPLASH ROUTE - Shown during initial auth check
+      // ─────────────────────────────────────────────────────────────────────
       GoRoute(
-        path: '/',
-        redirect: (context, state) {
-          final authState = authBloc.state;
-          return (authState is AuthAuthenticated) ? '/home' : '/login';
-        },
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
       ),
 
-      // Auth Routes
+      // ─────────────────────────────────────────────────────────────────────
+      // AUTH ROUTES
+      // ─────────────────────────────────────────────────────────────────────
       GoRoute(
         path: '/login',
         name: 'login',
@@ -80,21 +101,26 @@ class AppRouter {
         },
       ),
 
-      // Home Route
+      // ─────────────────────────────────────────────────────────────────────
+      // MAIN APP ROUTES
+      // ─────────────────────────────────────────────────────────────────────
       GoRoute(
         path: '/home',
         name: 'home',
         builder: (context, state) => const HomeScreen(),
       ),
 
-      // Chat Routes
+      // Root redirect
+      GoRoute(path: '/', redirect: (context, state) => '/splash'),
+
+      // ─────────────────────────────────────────────────────────────────────
+      // CHAT ROUTES
+      // ─────────────────────────────────────────────────────────────────────
       GoRoute(
         path: '/chat',
         name: 'chat',
-        redirect: (context, state) => '/home', // Redirect /chat to /home
+        redirect: (context, state) => '/home',
       ),
-
-      // Chat Room Route
       GoRoute(
         path: '/chat/room/:roomId',
         name: 'chatRoom',
@@ -105,7 +131,9 @@ class AppRouter {
         },
       ),
 
-      // User Search Route
+      // ─────────────────────────────────────────────────────────────────────
+      // USER ROUTES
+      // ─────────────────────────────────────────────────────────────────────
       GoRoute(
         path: '/search-users',
         name: 'searchUsers',
@@ -113,7 +141,7 @@ class AppRouter {
       ),
     ],
 
-    // Error handling
+    // Error handling - shown for unknown routes
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Column(

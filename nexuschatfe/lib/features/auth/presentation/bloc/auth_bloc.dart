@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nexuschatfe/features/auth/data/data_sources/local/auth_local_service.dart';
+import 'package:nexuschatfe/features/auth/data/models/user_model.dart';
 import 'package:nexuschatfe/features/auth/domain/entities/auth_session.dart';
 import 'package:nexuschatfe/features/auth/domain/use_case/register_user.dart';
 import 'package:nexuschatfe/features/auth/domain/use_case/login_user.dart';
@@ -40,15 +41,44 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutRequested>(_onLogoutRequested);
   }
 
+  /// Check if user has a valid session stored locally.
+  /// This is called on app startup to restore the session.
   Future<void> _onCheckAuthStatusRequested(
     CheckAuthStatusRequested event,
     Emitter<AuthState> emit,
   ) async {
+    print('🔐 Checking auth status...');
+
     final token = await _localService.getToken();
+
     if (token != null && token.isNotEmpty) {
-      final session = AuthSession(token: token, user: null);
-      emit(AuthAuthenticated(session));
+      print('🔐 Token found, checking for user data...');
+
+      // Try to get stored user data
+      final userData = await _localService.getUserData();
+
+      if (userData != null) {
+        // We have cached user data - create full session
+        try {
+          final user = UserModel.fromJson(userData);
+          final session = AuthSession(token: token, user: user);
+          print('✅ Session restored for user: ${user.email}');
+          emit(AuthAuthenticated(session));
+        } catch (e) {
+          print('❌ Error parsing stored user data: $e');
+          // Clear corrupted data and logout
+          await _localService.logout();
+          emit(const AuthUnauthenticated());
+        }
+      } else {
+        // Token exists but no user data - this shouldn't happen normally
+        // Could be from an old version, clear and force re-login
+        print('⚠️ Token found but no user data, clearing session...');
+        await _localService.logout();
+        emit(const AuthUnauthenticated());
+      }
     } else {
+      print('⚠️ No token found, user is unauthenticated');
       emit(const AuthUnauthenticated());
     }
   }

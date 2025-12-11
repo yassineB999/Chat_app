@@ -3,6 +3,7 @@ import 'package:nexuschatfe/core/error/exceptions.dart';
 import 'package:nexuschatfe/core/error/failures.dart';
 import 'package:nexuschatfe/features/auth/data/data_sources/local/auth_local_service.dart';
 import 'package:nexuschatfe/features/auth/data/data_sources/remote/auth_remote_data_source.dart';
+import 'package:nexuschatfe/features/auth/data/models/user_model.dart';
 import 'package:nexuschatfe/features/auth/domain/entities/auth_session.dart';
 import 'package:nexuschatfe/features/auth/domain/repository/auth_repository.dart';
 
@@ -11,6 +12,16 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthLocalService _localService;
 
   AuthRepositoryImpl(this._remoteDataSource, this._localService);
+
+  /// Helper method to save session data (token + user) locally
+  Future<void> _saveSessionLocally(AuthSession session) async {
+    await _localService.saveToken(session.token);
+    if (session.user != null) {
+      // Cast to UserModel to access toJson()
+      final userModel = session.user as UserModel;
+      await _localService.saveUserData(userModel.toJson());
+    }
+  }
 
   @override
   Future<Either<Failure, void>> register({
@@ -40,8 +51,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final session = await _remoteDataSource.verifyOtp(email: email, otp: otp);
 
-      // Save token locally
-      await _localService.saveToken(session.token);
+      // Save token AND user data locally for session persistence
+      await _saveSessionLocally(session);
 
       return Right(session);
     } on ServerException catch (e) {
@@ -62,7 +73,8 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
 
-      await _localService.saveToken(session.token);
+      // Save token AND user data locally for session persistence
+      await _saveSessionLocally(session);
 
       return Right(session);
     } on ServerException catch (e) {
@@ -81,7 +93,8 @@ class AuthRepositoryImpl implements AuthRepository {
         accessToken: accessToken,
       );
 
-      await _localService.saveToken(session.token);
+      // Save token AND user data locally for session persistence
+      await _saveSessionLocally(session);
 
       return Right(session);
     } on ServerException catch (e) {
