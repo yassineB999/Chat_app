@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('chat_room_messages', function (Blueprint $table) {
             // Add group_id for group messages
-            $table->foreignId('group_id')->nullable()->after('room_id')->constrained('chat_groups')->onDelete('cascade');
+            $table->foreignId('group_id')->nullable()->after('chat_room_id')->constrained('chat_groups')->onDelete('cascade');
         });
     }
 
