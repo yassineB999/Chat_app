@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('messages', function (Blueprint $table) {
+        Schema::table('chat_room_messages', function (Blueprint $table) {
             // Add group_id for group messages
             $table->foreignId('group_id')->nullable()->after('room_id')->constrained('chat_groups')->onDelete('cascade');
         });
@@ -22,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('messages', function (Blueprint $table) {
+        Schema::table('chat_room_messages', function (Blueprint $table) {
             $table->dropForeign(['group_id']);
             $table->dropColumn('group_id');
         });

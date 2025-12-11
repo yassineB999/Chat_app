@@ -17,6 +17,8 @@ tests
 .github
 README.md
 PUSHER_SETUP.md
+public/storage
 docker
 !docker/supervisord.conf
 !docker/nginx
+!docker/entrypoint.sh

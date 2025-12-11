@@ -46,9 +46,8 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 RUN if [ ! -f .env ]; then cp .env.example .env 2>/dev/null || echo "APP_KEY=" > .env; fi
 
 # Optimize Laravel (skip key:generate as it will be done later)
-RUN php artisan config:cache || true
-RUN php artisan route:cache || true  
-RUN php artisan view:cache || true
+# We do NOT run config:cache here because it freezes build-time env vars
+# and ignores runtime env vars. We will run it in entrypoint or manually.
 
 # Expose port 9000
 EXPOSE 9000

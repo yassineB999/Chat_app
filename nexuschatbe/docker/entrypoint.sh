@@ -1,14 +1,7 @@
 #!/bin/bash
 set -e
 
-# Wait for MySQL to be ready
-echo "Waiting for MySQL..."
-until php artisan db:show 2>/dev/null; do
-    echo "MySQL is unavailable - sleeping"
-    sleep 2
-done
+echo "Starting NexusChat application..."
 
-echo "MySQL is up - executing command"
-
-# Start supervisor
+# Start supervisor (which runs PHP-FPM, queue worker, scheduler)
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
